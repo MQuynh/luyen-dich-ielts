@@ -124,6 +124,28 @@ svg.ic{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-wid
 .back{display:inline-flex;align-items:center;gap:8px;color:var(--fg);text-decoration:none;font-weight:500;padding:6px 10px 6px 6px;border-radius:8px;width:fit-content}
 .back:hover{background:var(--surface-2)}
 
+/* Chi tiết chủ đề */
+.set-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.set-head .view-head h1{font-size:30px}
+.prog{display:flex;flex-direction:column;gap:8px}
+.prog-row{display:flex;justify-content:space-between;font-size:13.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.prog-row span:last-child{color:var(--fg);font-weight:600}
+.prog-bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.prog-bar i{display:block;height:100%;background:var(--fg);width:0;transition:width .3s}
+.groups{display:flex;flex-direction:column;gap:22px}
+.group{display:flex;flex-direction:column;gap:10px}
+.group .eyebrow b{color:var(--fg);margin-left:4px}
+.item{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px;text-align:left;color:var(--fg);width:100%;transition:border-color .15s,transform .15s}
+.item:hover{border-color:var(--accent);transform:translateY(-1px)}
+.item .it-body{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}
+.item .it-done{display:inline-flex;align-items:center;gap:5px;color:var(--ok);font-size:12.5px;font-weight:600}
+.item .it-vi{font-size:16px;font-weight:500;line-height:1.4}
+.item .it-en{font-family:var(--font-read);font-size:15.5px;color:var(--fg);line-height:1.4}
+.item .it-you{font-size:13px;color:var(--muted)}
+.item .it-meta{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.item .it-arrow{color:var(--muted);flex:none}
+.group-empty{font-size:13.5px;color:var(--muted);margin:0}
+
 /* Thẻ cấp độ, nhãn */
 .tag{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);font-weight:500}
 .lvl{font-size:12px;padding:3px 9px;border-radius:999px;font-weight:600}
@@ -352,6 +374,28 @@ textarea::placeholder{color:var(--muted)}
     <section class="view" id="view-sets" hidden>
       <div class="view-head"><h1 id="setsTitle"></h1><p id="setsDesc"></p></div>
       <div class="cards" id="setCards"></div>
+    </section>
+
+    <!-- Chi tiết một chủ đề / mẫu câu -->
+    <section class="view" id="view-set" hidden>
+      <div class="set-head">
+        <div class="view-head">
+          <p class="eyebrow" id="setKind"></p>
+          <h1 id="setName"></h1>
+          <p id="setMeta"></p>
+        </div>
+        <a class="back" href="#chu-de" id="setBack"><svg class="ic" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Quay lại</a>
+      </div>
+      <div class="notebox" id="setNote" hidden></div>
+      <div class="prog">
+        <div class="prog-row"><span id="setDone"></span><span id="setPct"></span></div>
+        <div class="prog-bar"><i id="setBar"></i></div>
+      </div>
+      <div class="sec-head" style="align-items:center">
+        <p style="margin:0;font-weight:600">Bài tập <span id="setCount" style="color:var(--muted);font-weight:500"></span></p>
+        <button class="ghost" id="hideDoneBtn" type="button">Ẩn bài đã làm</button>
+      </div>
+      <div id="setGroups" class="groups"></div>
     </section>
 
     <!-- Luyện bài luận -->
@@ -968,13 +1012,13 @@ var grading=null, sGrading=null;
 var curView="home";
 
 /* ---------- Điều hướng giữa các màn ---------- */
-var VIEWS={home:"view-home",essays:"view-essays",topics:"view-sets",patterns:"view-sets",essay:"view-essay",single:"view-single"};
+var VIEWS={home:"view-home",essays:"view-essays",topics:"view-sets",patterns:"view-sets",set:"view-set",essay:"view-essay",single:"view-single"};
 var TITLES={home:"Luyện tập",essays:"Bài luận",topics:"Câu lẻ theo chủ đề",patterns:"Câu lẻ theo mẫu câu"};
 function showView(name){
   curView=name;
   Object.keys(VIEWS).forEach(function(k){ var v=$(VIEWS[k]); if(v) v.hidden=true; });
   $(VIEWS[name]).hidden=false;
-  document.querySelectorAll(".nav a[data-view]").forEach(function(a){ var v=a.dataset.view; a.classList.toggle("active", v===name||(name==="essay"&&v==="essays")||(name==="single"&&v===singleCur.kind)); });
+  document.querySelectorAll(".nav a[data-view]").forEach(function(a){ var v=a.dataset.view; a.classList.toggle("active", v===name||(name==="essay"&&v==="essays")||((name==="single"||name==="set")&&v===singleCur.kind)); });
   closeSide();
   window.scrollTo(0,0);
 }
@@ -983,6 +1027,7 @@ function route(){
   if(h==="bai-luan"){ renderEssayCards(); showView("essays"); $("topTitle").textContent=TITLES.essays; }
   else if(h==="chu-de"){ renderSetCards("topics"); showView("topics"); $("topTitle").textContent=TITLES.topics; }
   else if(h==="mau-cau"){ renderSetCards("patterns"); showView("patterns"); $("topTitle").textContent=TITLES.patterns; }
+  else if(h==="bo"){ renderSetDetail(); showView("set"); $("topTitle").textContent=findSet(singleCur.kind,singleCur.set).name; }
   else if(h==="luyen"){ loadEssay(curId); showView("essay"); $("topTitle").textContent=essay.title; }
   else if(h==="cau"){ renderSingle(); showView("single"); $("topTitle").textContent=findSet(singleCur.kind,singleCur.set).name; }
   else { renderHome(); showView("home"); $("topTitle").textContent="Luyện Dịch IELTS"; }
@@ -1023,11 +1068,54 @@ function renderSetCards(kind){
   }).join("");
 }
 function openSet(kind,setId){
-  var set=findSet(kind,setId), idx=0;
-  for(var i=0;i<set.items.length;i++){ var r=singleProg[sKey(kind,set.id,i)]; if(!r||!r.fb){ idx=i; break; } if(i===set.items.length-1) idx=0; }
-  singleCur={kind:kind,set:set.id,idx:idx}; LS.set("vd.singleCur",singleCur);
+  var set=findSet(kind,setId);
+  singleCur={kind:kind,set:set.id,idx:0}; LS.set("vd.singleCur",singleCur);
+  location.hash="bo"; if(curView==="set") route();
+}
+function openSentence(idx){
+  singleCur.idx=idx; LS.set("vd.singleCur",singleCur);
   sShowNote=false; sShowRef=false;
   location.hash="cau"; if(curView==="single") route();
+}
+function renderSetDetail(){
+  var kind=singleCur.kind, set=findSet(kind,singleCur.set), n=set.items.length;
+  var counts={de:0,vua:0,kho:0}; set.items.forEach(function(it){ counts[it[2]||"vua"]++; });
+  $("setKind").textContent=kind==="patterns"?"Mẫu câu":"Chủ đề";
+  $("setName").textContent=set.name;
+  $("setMeta").textContent=n+" bài tập · "+counts.de+" dễ · "+counts.vua+" vừa · "+counts.kho+" khó"+(set.desc?" · "+set.desc:"");
+  $("setBack").setAttribute("href",kind==="patterns"?"#mau-cau":"#chu-de");
+  $("setNote").hidden=!set.note; if(set.note) $("setNote").innerHTML="<b>Cách dùng:</b> "+esc(set.note);
+  var done=setDone(kind,set), pct=Math.round(done/n*100);
+  $("setDone").textContent=done+"/"+n+" bài"; $("setPct").textContent=pct+"%"; $("setBar").style.width=pct+"%";
+  $("setCount").textContent=n;
+  $("hideDoneBtn").textContent=settings.hideDone?"Hiện bài đã làm":"Ẩn bài đã làm";
+  var html="";
+  ["de","vua","kho"].forEach(function(lv){
+    var idxs=[]; set.items.forEach(function(it,i){ if((it[2]||"vua")===lv) idxs.push(i); });
+    if(!idxs.length) return;
+    html+='<div class="group"><p class="eyebrow">'+LEVEL[lv]+'<b>'+idxs.length+'</b></p>';
+    var shown=0;
+    idxs.forEach(function(i){
+      var it=set.items[i], rec=singleProg[sKey(kind,set.id,i)]||{}, isDone=!!rec.fb;
+      if(isDone&&settings.hideDone) return;
+      shown++;
+      var f=rec.fb||{}, tries=rec.hist?rec.hist.length:0;
+      html+='<button type="button" class="item" data-idx="'+i+'"><span class="it-body">';
+      if(isDone) html+='<span class="it-done">'+checkIcon().replace('width:22px;height:22px;stroke-width:2.4','width:13px;height:13px;stroke-width:3')+'Đã làm</span>';
+      html+='<span class="it-vi">'+esc(it[0])+'</span>';
+      if(isDone){
+        html+='<span class="it-en">'+esc(it[1])+'</span>';
+        if(rec.a&&words(rec.a).join(" ").toLowerCase()!==words(it[1]).join(" ").toLowerCase()) html+='<span class="it-you">Bạn viết: '+esc(rec.a)+'</span>';
+        html+='<span class="it-meta">'+(typeof f.score==="number"?'<span class="score-pill">'+f.score+'/10</span>':'')+(f.award?'<span class="ptag soft">+'+f.award.total+' điểm</span>':'')+(tries?'<span>'+tries+' lần nộp</span>':'')+'</span>';
+      } else {
+        html+='<span class="it-meta"><span class="lvl lvl-'+lv+'">'+LEVEL[lv]+'</span>'+(rec.a?'<span>Đang viết dở</span>':'<span>Chưa làm</span>')+'</span>';
+      }
+      html+='</span><svg class="ic it-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg></button>';
+    });
+    if(!shown) html+='<p class="group-empty">Đã làm hết các bài mức này.</p>';
+    html+='</div>';
+  });
+  $("setGroups").innerHTML=html;
 }
 
 /* ---------- Bài luận: hiển thị ---------- */
@@ -1164,7 +1252,7 @@ function feedbackHTML(f,o){
     h+='<div class="fb-foot">';
     if(!o.isLast) h+='<button class="primary" id="'+o.nextId+'">Câu tiếp &#8250;</button>';
     else if(o.fullId) h+='<button class="primary" id="'+o.fullId+'">Xem toàn bài</button>';
-    else h+='<a class="ghost" href="'+(singleCur.kind==="patterns"?"#mau-cau":"#chu-de")+'">Chọn bộ câu khác</a>';
+    else h+='<a class="ghost" href="#bo">Xem lại cả bộ câu</a>';
     if(f.local) h+='<span class="tiny">So khớp tự động với đáp án mẫu; cách diễn đạt khác vẫn có thể đúng. Mở trong Claude hoặc dán API key để AI chấm thật.</span>';
     h+='</div>';
   }
@@ -1375,7 +1463,7 @@ function updateAiNote(){
 function sItem(){ var set=findSet(singleCur.kind,singleCur.set); var it=set.items[singleCur.idx]||set.items[0]; return {set:set,vi:it[0],en:it[1],lv:it[2]||"vua",key:sKey(singleCur.kind,set.id,singleCur.idx)}; }
 function renderSingle(){
   var c=sItem(), rec=singleProg[c.key]||{}, total=c.set.items.length;
-  el.singleBack.setAttribute("href",singleCur.kind==="patterns"?"#mau-cau":"#chu-de");
+  el.singleBack.setAttribute("href","#bo");
   el.sChips.innerHTML='<span class="tag">'+esc(c.set.name)+'</span><span class="lvl lvl-'+c.lv+'">'+LEVEL[c.lv]+'</span>'+(rec.fb?'<span class="done-ic" title="Đã đánh giá">'+checkIcon().replace('style="','style="width:20px;height:20px;')+'</span>':'');
   el.sVi.textContent=c.vi;
   el.sAnswer.value=rec.a||"";
@@ -1460,8 +1548,10 @@ $("menuBtn").addEventListener("click",openSide); $("scrim").addEventListener("cl
 document.querySelectorAll(".nav a").forEach(function(a){ a.addEventListener("click",function(){ if(a.getAttribute("href")===location.hash||(a.getAttribute("href")==="#"&&!location.hash)) route(); }); });
 document.addEventListener("click",function(ev){
   var b=ev.target.closest("[data-essay]"); if(b){ saveAnswer(); curId=b.dataset.essay; LS.set("vd.cur",curId); if(location.hash==="#luyen") route(); else location.hash="luyen"; return; }
-  var c=ev.target.closest("[data-set]"); if(c){ openSet(c.dataset.kind,c.dataset.set); }
+  var c=ev.target.closest("[data-set]"); if(c){ openSet(c.dataset.kind,c.dataset.set); return; }
+  var d=ev.target.closest(".item[data-idx]"); if(d){ openSentence(+d.dataset.idx); }
 });
+$("hideDoneBtn").addEventListener("click",function(){ settings.hideDone=!settings.hideDone; LS.set("vd.settings",settings); renderSetDetail(); });
 el.body.addEventListener("click",function(ev){ var b=ev.target.closest(".s"); if(b) goTo(+b.dataset.i); });
 el.prev.addEventListener("click",function(){ goTo(P.cur-1); });
 el.next.addEventListener("click",function(){ goTo(P.cur+1); });
