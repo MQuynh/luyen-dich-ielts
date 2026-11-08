@@ -1303,10 +1303,9 @@ function heuristicFeedback(ctx){
   });
   if(cur) groups.push(cur); if(run.length) runs.push(run);
   var penalty=0;
-  /* viết hoa đầu câu, dấu câu cuối, tên riêng */
+  /* viết hoa đầu câu, tên riêng (không bắt lỗi dấu câu cuối) */
   var t=ctx.txt.trim();
   if(u.length&&/^[a-z]/.test(t)&&/^[A-Z]/.test(ctx.en.trim())){ f.errors.push({wrong:u[0],right:u[0].charAt(0).toUpperCase()+u[0].slice(1),why:"Chữ đầu câu cần viết hoa."}); penalty+=0.5; }
-  if(/[.!?]$/.test(ctx.en.trim())&&!/[.!?]$/.test(t)){ f.errors.push({wrong:u[u.length-1]||"",right:(u[u.length-1]||"")+ctx.en.trim().slice(-1),why:"Câu cần kết thúc bằng dấu "+(ctx.en.trim().slice(-1)==="."?"chấm":"câu")+"."}); penalty+=0.5; }
   ops.forEach(function(o,k){ if(o.t==="eq"&&k>0&&o.u!==o.r){ f.errors.push({wrong:o.u,right:o.r,why:/^[A-Z]/.test(o.r)?"Tên riêng viết là "+o.r+".":"Viết hoa, viết thường: đáp án mẫu viết "+o.r+"."}); penalty+=0.5; } });
   /* các nhóm khác biệt */
   groups.forEach(function(g){
@@ -1331,7 +1330,7 @@ function heuristicFeedback(ctx){
   var sim=(u.length+r.length)?2*matched/(u.length+r.length):0;
   var score=Math.round(Math.max(0,Math.min(10,10-penalty)));
   if(sim<0.35) score=Math.min(score,4);
-  if(!f.errors.length) score=10;
+  if(!f.errors.length) score=10; else score=Math.min(score,9);
   f.score=score; f.verdict=verdictText(score);
   f.comment=score>=10?"Khớp với đáp án mẫu.":score>=8?"Gần khớp đáp án mẫu, còn vài khác biệt nhỏ.":score>=6?"Đúng ý chính, còn một số chỗ cần xem lại.":"Khác khá nhiều so với đáp án mẫu, hãy đối chiếu từng cụm.";
   if(f.errors.length) f.corrected=ctx.en;
